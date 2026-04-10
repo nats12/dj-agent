@@ -72,40 +72,51 @@ DJ Agent reads and writes these files. Make sure they exist before running:
 
 ## Quick Start
 
+> **Requires Python 3.10+.** If your default `python`/`pip` points to an older version (check with `python3 --version`), use the full path to your Python 3.10+ install (e.g. `python3.13 -m pip` instead of `pip`).
+
+### 1. Clone and install
+
 ```bash
-# Clone and install
 git clone https://github.com/toimfortes/dj-agent.git
 cd dj-agent
-pip install -e ".[dev]"       # Core + dev tools (no GUI)
 
-# To use the Gradio web UI, install with the gui extra:
-pip install -e ".[gui]"       # Or pip install -e ".[all]" for everything
+# Recommended: install everything (GUI, mastering, stems, AI reasoning, etc.)
+pip install -e ".[all]"
 
-# Launch GUI
+# Launch the GUI
 python -m dj_agent
-
-# Or use via Claude Code (no GUI needed)
-claude
-> magic
 ```
 
-> **Note:** Requires Python 3.10+. If your default `python`/`pip` points to an older version, use the full path (e.g. `python3.13 -m pip install ...`).
+The GUI tabs (Audio Mastering, Stems, Key Detection, AI Reasoning, etc.) each require their own dependencies. Installing with `[all]` ensures every tab works out of the box. If you prefer a minimal install, see [Optional extras](#optional-extras) below.
+
+### 2. Set up AI Analysis (recommended)
+
+The AI Reasoning tab needs at least one backend. The easiest option is Gemini (free API key, works on any machine):
+
+```bash
+# Get a free key at https://aistudio.google.com/apikey
+export GOOGLE_API_KEY="your-key"
+```
+
+Add this to your `~/.zshrc` or `~/.bashrc` to persist it across sessions.
+
+Other backends:
+- **Ollama** (local, free) — install from [ollama.com](https://ollama.com), then `ollama pull qwen3.5:27b`
+- **Audio Flamingo** (local, CUDA GPU required) — `pip install -e ".[reasoning]"` and a CUDA-capable GPU
 
 ### Optional extras
-```bash
-pip install -e ".[all]"          # Everything (stems, mood, beats, reasoning, GUI)
-pip install -e ".[stems]"        # Roformer stem separation
-pip install -e ".[master]"       # Pedalboard mastering
-pip install -e ".[mood]"         # Essentia + CLAP mood classification
-pip install -e ".[beats]"        # Beat This! transformer beat tracking
-pip install -e ".[reasoning]"    # Gemini AI reasoning
-pip install -e ".[gui]"          # Gradio web UI
-```
 
-### Gemini AI Setup (optional)
-Get a free API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey), then:
+If you don't want to install everything, pick only what you need:
+
 ```bash
-export GOOGLE_API_KEY="your-key"
+pip install -e ".[dev]"          # Core + dev tools (tests, linting) — no GUI
+pip install -e ".[gui]"          # Gradio web UI only
+pip install -e ".[master]"       # Audio Mastering tab (pedalboard)
+pip install -e ".[stems]"        # Stems tab (Roformer stem separation)
+pip install -e ".[mood]"         # Mood classification (Essentia + CLAP)
+pip install -e ".[beats]"        # Beat tracking (Beat This! transformer)
+pip install -e ".[reasoning]"    # AI Reasoning tab (Gemini SDK + transformers)
+pip install -e ".[all]"          # All of the above
 ```
 
 ---
