@@ -76,15 +76,20 @@ DJ Agent reads and writes these files. Make sure they exist before running:
 # Clone and install
 git clone https://github.com/toimfortes/dj-agent.git
 cd dj-agent
-pip install -e ".[dev]"
+pip install -e ".[dev]"       # Core + dev tools (no GUI)
+
+# To use the Gradio web UI, install with the gui extra:
+pip install -e ".[gui]"       # Or pip install -e ".[all]" for everything
 
 # Launch GUI
 python -m dj_agent
 
-# Or use via Claude Code
+# Or use via Claude Code (no GUI needed)
 claude
 > magic
 ```
+
+> **Note:** Requires Python 3.10+. If your default `python`/`pip` points to an older version, use the full path (e.g. `python3.13 -m pip install ...`).
 
 ### Optional extras
 ```bash
