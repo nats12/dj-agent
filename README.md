@@ -74,7 +74,7 @@ DJ Agent reads and writes these files. Make sure they exist before running:
 
 ```bash
 # Clone and install
-git clone https://github.com/toimfortes/dj-agent.git
+git clone https://github.com/nats12/dj-agent.git
 cd dj-agent
 pip install -e ".[dev]"
 
