@@ -1,0 +1,48 @@
+# DJ Agent Configuration
+# Edit to customise analysis behaviour.
+
+energy:
+  lufs_weight: 0.30
+  spectral_centroid_weight: 0.12
+  onset_density_weight: 0.20
+  bpm_weight: 0.13
+  dynamic_range_weight: 0.10
+  bass_energy_weight: 0.15
+
+cues:
+  min_segments: 4
+  max_segments: 12
+  energy_threshold_low: 0.45
+  energy_threshold_high: 0.65
+  min_cue_distance_sec: 8.0
+  phrase_length_bars: 8
+  use_pssi: true
+
+memory:
+  path: ~/.dj-agent/memory.json
+  backup_count: 5
+  auto_backup: true
+
+rekordbox:
+  check_process: true
+  backup_before_write: true
+  # Set this to your Rekordbox XML output directory
+  xml_output_dir: ~/Documents/DJ/dj-agent/
+
+duplicates:
+  hash_chunk_size: 65536
+  fuzzy_threshold: 85
+  duration_tolerance_sec: 10.0
+
+normalize:
+  # -10 LUFS (user preference), -8 for loud club, -14 for streaming
+  target_lufs: -10.0
+  true_peak_db: -1.0
+  output_format: flac
+  output_bitrate: 320k
+
+# Processing tier: fast, medium, full
+# fast   = LUFS, silence, quality check (~1-2 hrs / 1000 tracks)
+# medium = + Essentia mood/voice/genre (~3-4 hrs)
+# full   = + Demucs stems, madmom phrases (~7-10 hrs, GPU recommended)
+processing_tier: fast

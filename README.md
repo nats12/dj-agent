@@ -1,84 +1,107 @@
 # DJ Agent
 
-An AI agent that enriches your Rekordbox library — energy ratings, cue points, metadata cleanup, duplicate detection — powered by [Claude Code](https://docs.claude.com/en/docs/claude-code/overview).
+An AI-powered DJ library enrichment tool — energy ratings, cue points, key detection, metadata cleanup, LUFS normalization, stem separation, mood classification, harmonic mixing, mastering, and more.
 
-No app to install. Just talk to the agent and it operates directly on your Rekordbox DB and XML.
+Works with **Rekordbox** (DB + XML), exports to **Traktor**, **Serato**, **Engine DJ**, and **VirtualDJ**. Powered by [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) with optional **Gemini** AI reasoning.
 
-> **Fork-friendly, contribution-closed.** You're welcome to fork this repo and make it your own. PRs will not be reviewed or merged — this is a personal tool shared publicly for other DJs to use and adapt.
+> **Fork-friendly.** Fork this repo and make it your own.
 
 ---
 
-## What it does
+## Features
 
+### Core Analysis
 | Feature | Detail |
 |---|---|
-| **Energy ratings** | Analyses audio (RMS loudness, spectral brightness, onset density, bass energy) and assigns a 1–10 energy rating, written to Rekordbox's My Tag system |
-| **Hot cue detection** | Detects intros, drops, breakdowns, and outros via structural analysis — written as colour-coded hot cues (A–H) |
-| **Metadata cleanup** | Fixes artist/title splits, strips ANSI/HTML artifacts, normalises casing and garbage characters |
-| **Duplicate detection** | Finds dupes via file hashing, audio fingerprinting, and fuzzy artist+title matching |
-| **Broken track relocation** | Finds missing/moved files and offers to relocate them |
-| **Library health report** | Summary of quality issues, missing metadata, and suspicious BPM values |
+| **Energy ratings** | LUFS-based energy scoring (1–10) with configurable weights, written to Rekordbox My Tag system |
+| **Key detection** | Essentia EDMA + librosa fallback, Camelot notation, piano chord verification |
+| **Hot cue detection** | PSSI-first, phrase-aware cue detection with adaptive segmentation and dual thresholds |
+| **Metadata cleanup** | Artist/title splitting, HTML entity fixing, watermark removal, smart title casing |
+| **Duplicate detection** | Chunked file hashing + artist-prefix blocking fuzzy match |
+| **Beat grid verification** | Half/double BPM fix with genre-aware nearest-octave selection |
+| **Library analytics** | Genre/BPM/key distributions, coverage gaps, metadata completeness scoring |
 
-**What this agent doesn't do:** BPM detection, key detection, beat grid analysis, or waveform generation. Rekordbox is the source of truth for all of these. Import your tracks into Rekordbox first, let it do the audio analysis, then run this agent to pick up where Rekordbox leaves off.
+### Audio Processing
+| Feature | Detail |
+|---|---|
+| **LUFS normalization** | Measure + normalize to target LUFS (-8 club, -14 streaming), ReplayGain tags |
+| **Audio mastering** | Multiband dynamics (4-band Linkwitz-Riley), clip repair, shelving EQ, limiting |
+| **Audio quality** | Fake FLAC detection (brick-wall spectral analysis), clipping, silence detection |
+| **Stem separation** | MelBand-Roformer (SOTA) via audio-separator, Demucs fallback |
+| **Pitch shifting** | pyrubberband (Ableton engine) + pedalboard fallback, key-aware shifting |
+
+### DJ Intelligence
+| Feature | Detail |
+|---|---|
+| **Harmonic mixing** | Full Camelot wheel, symmetric transition scoring, harmonic suggestions |
+| **Set building** | TSP-based track ordering with energy arc constraints |
+| **Smart playlists** | Boolean algebra rules engine with parentheses (`genre:Techno AND energy:8+`) |
+| **Mashup engine** | Key/BPM/vocal compatibility scoring with transition tips |
+| **Mood classification** | Essentia 5-mood + CLAP zero-shot with custom DJ labels |
+| **Vocal detection** | Essentia fast pass + Demucs thorough (vocal/instrumental/partial) |
+
+### AI Reasoning (optional)
+| Feature | Detail |
+|---|---|
+| **Vibe analysis** | "Dark hypnotic warehouse techno with rolling bass" — via Gemini or Flamingo |
+| **Transition advice** | DJ mixing technique suggestions between two tracks |
+| **Nuance tagging** | Bassline type, vocal style, rhythm feel, mood, dancefloor setting |
+
+### Multi-Platform Export
+Rekordbox XML, Traktor NML, Serato ID3 (MP3/AIFF), Engine DJ SQLite, VirtualDJ XML.
 
 ---
 
-## Demo
+## Prerequisites
 
-Running `magic` on the Acid playlist (20 tracks):
+### Required Files (Windows)
 
-### Before
-No energy tags. Several tracks have artist names stuck in the title field, and some titles contain ANSI/HTML entity artifacts (`SOÑA&290R`, `&amp;`).
+DJ Agent reads and writes these files. Make sure they exist before running:
 
-![Before — no energy tags, messy metadata](docs/before.png)
+| File | Size | Purpose |
+|---|---|---|
+| `%APPDATA%\Pioneer\rekordbox\master.db` | ~37 MB | Rekordbox database (tracks, playlists, tags, cues) |
+| `%APPDATA%\Pioneer\rekordbox\share\PIONEER\USBANLZ\` | ~567 MB | Rekordbox phrase/waveform analysis (PSSI data for cue detection) |
+| `%USERPROFILE%\.dj-agent\memory.json` | ~5 MB | Agent memory (processed tracks, corrections, calibration) — created automatically on first run |
+| `config.yaml` (project root) | ~1 KB | Agent configuration (energy weights, cue thresholds, etc.) |
+| Rekordbox XML export | ~3 MB | Used for cue/playlist sync (path configured in `config.yaml`) |
 
-### After
-Energy ratings (7–10) written to My Tag. Artist names extracted from titles into the Artist column. Garbled title characters fixed.
-
-![After — energy tags, cleaned metadata](docs/after.png)
-
-### Hot cue detection
-Structural analysis detects intros, drops, breakdowns, and outros — written as colour-coded hot cues (A–H).
-
-![Hot cues — intro, drops, breakdowns](docs/hot-cues.png)
+> **Close Rekordbox before running DJ Agent.** Rekordbox holds an exclusive lock on `master.db` while running — the agent cannot read or write the database until Rekordbox is closed. The agent checks for this automatically and will refuse to proceed if Rekordbox is detected.
 
 ---
 
-## Getting started
-
-### Prerequisites
-
-- **Rekordbox 6 or 7** with tracks already imported and analysed
-- **Claude Code** installed and authenticated ([install guide](https://code.claude.com/docs/en/setup)) — requires a Pro, Max, or Teams plan
-- **Python 3.10+**
-- **macOS or Linux** (Windows via WSL should work but is untested)
-
-### Installation
+## Quick Start
 
 ```bash
-# Clone the repo
-git clone https://github.com/nats12/dj-agent.git
+# Clone and install
+git clone https://github.com/toimfortes/dj-agent.git
 cd dj-agent
+pip install -e ".[dev]"
 
-# Install Python dependencies
-pip install pyrekordbox mutagen librosa numpy
-pip install pyacoustid fuzzywuzzy python-Levenshtein
-```
+# Launch GUI
+python -m dj_agent
 
-### First run
-
-```bash
-# From the dj-agent directory
+# Or use via Claude Code
 claude
+> magic
 ```
 
-Claude Code reads the `CLAUDE.md` file automatically and becomes the DJ Agent. Then just type:
-
+### Optional extras
+```bash
+pip install -e ".[all]"          # Everything (stems, mood, beats, reasoning, GUI)
+pip install -e ".[stems]"        # Roformer stem separation
+pip install -e ".[master]"       # Pedalboard mastering
+pip install -e ".[mood]"         # Essentia + CLAP mood classification
+pip install -e ".[beats]"        # Beat This! transformer beat tracking
+pip install -e ".[reasoning]"    # Gemini AI reasoning
+pip install -e ".[gui]"          # Gradio web UI
 ```
-magic
-```
 
-It will walk you through connecting to your Rekordbox library on the first run.
+### Gemini AI Setup (optional)
+Get a free API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey), then:
+```bash
+export GOOGLE_API_KEY="your-key"
+```
 
 ---
 
@@ -86,83 +109,58 @@ It will walk you through connecting to your Rekordbox library on the first run.
 
 | Say this | What it does |
 |---|---|
-| `magic` / `do your thing` | Full pipeline — energy, cues, tags, cleanup, sync |
-| `calculate energy` | Analyse tracks and assign energy ratings (1–10) |
-| `calculate cues` | Detect intro, drop, breakdown, outro and set hot cues |
-| `calculate tags` | Write energy ratings to Rekordbox My Tag system |
-| `find duplicates` | Find dupes via file hashing, fingerprinting, fuzzy metadata |
-| `find broken` | Find missing/moved files and offer to relocate them |
-| `cleanup` | Clean up titles, artist names, genre casing |
-| `health` | Library health report — no modifications |
-| `sync` / `write back` | Write results back to Rekordbox (XML + DB) |
+| `magic` | Full pipeline — energy, cues, tags, cleanup, sync |
+| `calculate energy` | LUFS-based energy ratings (1–10) |
+| `calculate cues` | Detect intro, drop, breakdown, outro |
+| `detect key` | Harmonic key detection with Camelot notation |
+| `normalize` | Measure/normalize LUFS loudness |
+| `master` | Platinum Notes-style mastering |
+| `detect vocals` | Vocal/instrumental classification |
+| `classify mood` | Mood/vibe tagging |
+| `find duplicates` | File hash + fuzzy metadata matching |
+| `check quality` | Fake FLAC, clipping, silence detection |
+| `check beatgrid` | BPM verification, half/double fix |
+| `harmonic mix` | Suggest compatible next tracks |
+| `build set` | Optimize track ordering with energy arcs |
+| `smart playlist [rule]` | Boolean rule-based playlist generation |
+| `find mashups` | Mashup-compatible track finder |
+| `separate stems` | Vocal/drum/bass/other separation |
+| `shift key` | Pitch shift to target key |
+| `analyze vibe` | AI-powered deep vibe analysis |
+| `analytics` | Library distribution reports |
+| `health` | Library health check |
+| `export to traktor/serato/engine` | Multi-platform cue export |
 
-All commands can be run on the full library or scoped to a specific playlist:
-```
-calculate energy for Disco
-cleanup Techno/Peak Time
-magic on my Acid playlist
-```
-
----
-
-## How it works
-
-```
-You                          Rekordbox                    DJ Agent
- │                               │                            │
- ├── Import tracks ────────────► │                            │
- │                               ├── BPM, key, beat grid      │
- │                               ├── Waveforms                │
- │                               │                            │
- ├── "magic" ──────────────────────────────────────────────► │
- │                               │                            ├── Analyse audio
- │                               │                            ├── Energy ratings
- │                               │                            ├── Hot cue detection
- │                               │                            ├── Metadata cleanup
- │                               │                            ├── Duplicate scan
- │                               │                            │
- │                               │ ◄──── XML + DB writes ─────┤
- │                               │                            │
- ├── DJ with enriched library ◄──┤                            │
-```
-
-Results are written back via two channels:
-- **XML export** — cues, titles, artists (safe, non-destructive)
-- **Direct DB writes** — My Tag energy ratings (faster, requires Rekordbox to be closed)
-
-BPM and Key are never touched.
+All commands can be scoped: `calculate energy for Disco`, `cleanup Techno/Peak Time`.
 
 ---
 
-## Energy calibration
+## Architecture
 
-The agent uses `energy_references.json` — user-provided energy ratings for sample tracks across each playlist. This calibrates the audio analysis to match your perception of energy, not just loudness.
-
-If the agent gets an energy rating wrong, just tell it:
 ```
-That should be energy 8, not 9
+src/dj_agent/           37 Python modules
+├── Core:       energy, cues, cleanup, tags, sync, memory, config, types
+├── Analysis:   keydetect, quality, duplicates, health, analytics
+├── DJ Tools:   harmonic, transitions, setbuilder, mashups, smartlists, phrases
+├── V2 Engines: stems, beatgrid, similarity, master, pitchshift
+├── AI:         reasoning, mood, vocals, metadata
+├── UI:         gui, gpu, export
+└── 194 tests across 28 test files
 ```
-It records the correction in the memory file and adjusts future ratings for that genre automatically.
 
----
-
-## Memory
-
-The agent remembers what it's done in `~/.dj-agent/memory.json` (snapshot: `memory.snapshot.json`). It tracks:
-
-- **Processed tracks** — so it doesn't re-analyse what's already done
-- **Energy corrections** — your overrides are preserved and never auto-overwritten
-- **Calibration offsets** — per-genre adjustments learned from your corrections
-- **Artist fixes** — so the same cleanup doesn't need to be confirmed twice
+V2 model hierarchy (auto-selects best available, graceful fallback):
+- **Stems:** MelBand-Roformer → Demucs
+- **Beats:** Beat This! → madmom → librosa
+- **Phrases:** All-In-One → madmom → librosa
+- **Similarity:** CLAP → librosa MFCC
+- **Reasoning:** Flamingo → Gemini SDK → Ollama
 
 ---
 
 ## License
 
-[MIT](LICENSE) — fork it, use it, make it yours. No attribution required.
+[MIT](LICENSE) — fork it, use it, make it yours.
 
 ---
 
-## Acknowledgements
-
-Built with [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) by Anthropic. Audio analysis powered by [librosa](https://librosa.org/). Rekordbox integration via [pyrekordbox](https://github.com/dylanljones/pyrekordbox).
+Built with [Claude Code](https://docs.claude.com/en/docs/claude-code/overview). Audio analysis by [librosa](https://librosa.org/), [Essentia](https://essentia.upf.edu/), [pyloudnorm](https://github.com/csteinmetz1/pyloudnorm). Rekordbox integration via [pyrekordbox](https://github.com/dylanljones/pyrekordbox). Mastering by [pedalboard](https://github.com/spotify/pedalboard). Stems by [audio-separator](https://github.com/nomadkaraoke/python-audio-separator).

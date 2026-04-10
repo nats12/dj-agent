@@ -113,27 +113,67 @@ tree.write(xml_path, encoding='utf-8', xml_declaration=True)
 
 Note: HTML entities in filenames (e.g. `&amp;` in `The Obsessed &amp; DBF`) are **literal characters on disk**. Do NOT `html.unescape()` file paths — only unescape title/artist display fields.
 
+## Step 2b: Clean-slate cue deletion (REQUIRED before XML import)
+
+**Rekordbox 7 refuses to overwrite existing cues via XML import.** "Import to
+Collection" silently no-ops on any track that already has cue data in the DB.
+To write new cues, you MUST delete the existing cues first:
+
+```python
+from pyrekordbox import Rekordbox6Database
+from pyrekordbox.db6 import tables
+
+db = Rekordbox6Database()
+for content_id in track_ids_to_update:
+    db.session.query(tables.DjmdCue).filter_by(ContentID=content_id).delete()
+    db.session.query(tables.ContentCue).filter_by(ContentID=content_id).delete()
+db.flush()
+db.commit()
+```
+
+Both `DjmdCue` AND `ContentCue` must be cleared. In Rekordbox 7, `ContentCue.Cues`
+(a JSON blob) is the authoritative cue store — `DjmdCue` rows are a secondary index
+rebuilt from the JSON on startup. Deleting only `DjmdCue` has no effect; Rekordbox
+regenerates it from `ContentCue.Cues`.
+
 ## Step 3: XML Import (user does this manually, only when cues were generated)
+
+### XML format requirements (critical for Rekordbox 7)
+
+- **TRACK elements MUST include `TotalTime`** (seconds) — without it, Rekordbox may
+  skip the track on import.
+- **Hot cue POSITION_MARK** (`Num="0".."7"`) includes `Red`, `Green`, `Blue` attrs.
+- **Memory cue POSITION_MARK** (`Num="-1"`) must **NOT** include RGB attributes —
+  Rekordbox's own export omits them from memory cues.
+- **A `PLAYLISTS` section** with at least one playlist node is required for the
+  sidebar right-click → "Import to Collection" target.
+
+### Import steps
 
 1. Open Rekordbox
 2. Preferences → Advanced → Database → rekordbox xml
-3. Set "Imported Library" path to the generated XML file
-4. Click OK
-5. In sidebar, expand "rekordbox xml"
-6. Find your playlist → select all → right-click → Import to Collection
+3. **Cache defeat**: Browse → select a DIFFERENT xml first → OK → then Browse → select
+   the real XML → OK (forces Rekordbox to re-read the file)
+4. In sidebar, expand "rekordbox xml"
+5. Find the "dj-agent sync" playlist → right-click → Import to Collection
 
 ### What gets updated on import
 - Hot cue points (POSITION_MARK elements)
 
 ### What Rekordbox preserves
-- Existing cue points and beat grids
 - BPM and key (passed through unchanged)
 - Playlists and playlist order
+
+### What gets REPLACED on import
+- Existing cue points on tracks where we deleted them in Step 2b
 
 ## Agent Workflow
 
 1. Ask user to confirm Rekordbox is closed
 2. DB write: energy tags, title/artist cleanup, genre, comments
-3. If new hot cues were generated: generate XML, tell user to open Rekordbox and import
+3. If new hot cues were generated:
+   a. Delete existing DjmdCue + ContentCue rows for target tracks (clean slate)
+   b. Generate XML with TotalTime, RGB on hot cues only, PLAYLISTS section
+   c. Tell user to open Rekordbox, cache-defeat, and import
 4. If no cues: done — no XML needed, user can just open Rekordbox
 5. Save memory file

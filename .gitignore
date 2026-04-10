@@ -8,3 +8,17 @@ rekordbox_*.xml
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+
+# Runtime logs
+*.log
+batch_log.txt
+cue_backfill.log
+full_rerun.log
+
+# Temp audio files
+*.wav
+src/dj_agent/temp_audio/
+*.mp3
+!tests/
+.env
